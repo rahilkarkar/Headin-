@@ -1,0 +1,18 @@
+// Firebase Storage Rules
+// These rules should be configured in your Firebase Console under Storage > Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload profile pictures to their own folder
+    match /profile_pictures/{userId}_{timestamp}.jpg {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Temporary rule for development - allow authenticated users to upload anything
+    // Remove this in production
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

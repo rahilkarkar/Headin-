@@ -6,7 +6,7 @@ import {
   Animated,
   Dimensions,
   SafeAreaView,
-  LinearGradient,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -17,14 +17,45 @@ export default function SplashScreen({ onComplete }) {
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.8);
   const slideAnim = new Animated.Value(50);
+  const rotateAnim = new Animated.Value(0);
+  const pulseAnim = new Animated.Value(1);
+
+  console.log('SplashScreen component rendered');
 
   useEffect(() => {
+    // Create a subtle rotation animation for the image
+    const rotationLoop = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 8000,
+        useNativeDriver: true,
+      }),
+      { iterations: -1 }
+    );
+
+    // Create a gentle pulsing effect
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ]),
+      { iterations: -1 }
+    );
+
     const animationSequence = Animated.sequence([
       Animated.delay(300),
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -35,23 +66,37 @@ export default function SplashScreen({ onComplete }) {
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 600,
+          duration: 800,
           useNativeDriver: true,
         }),
       ]),
-      Animated.delay(2000),
+      Animated.delay(2500),
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 500,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]);
 
+    console.log('Starting splash animations');
+    
+    // Start the continuous animations
+    rotationLoop.start();
+    pulseLoop.start();
+
+    // Start the main sequence
     animationSequence.start(() => {
+      console.log('Splash animation sequence completed');
       if (onComplete) {
         onComplete();
       }
     });
+
+    // Cleanup function to stop animations
+    return () => {
+      rotationLoop.stop();
+      pulseLoop.stop();
+    };
   }, []);
 
   return (
@@ -69,9 +114,26 @@ export default function SplashScreen({ onComplete }) {
             },
           ]}
         >
-          <View style={styles.iconWrapper}>
-            <Ionicons name="navigate" size={80} color={theme.colors.primary} />
-          </View>
+          <Animated.View style={[
+            styles.imageWrapper,
+            {
+              transform: [
+                { scale: pulseAnim },
+                {
+                  rotate: rotateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  }),
+                },
+              ],
+            },
+          ]}>
+            <Image
+              source={require('../../../assets/ChatGPT Image Aug 7, 2025, 05_53_16 PM.png')}
+              style={styles.splashImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
           <Text style={styles.appName}>Headin'</Text>
           <Text style={styles.tagline}>Where the vibe takes you</Text>
           
@@ -113,14 +175,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: height * 0.15,
   },
-  iconWrapper: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 60,
-    padding: 20,
+  imageWrapper: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     marginBottom: theme.spacing.lg,
-    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 3,
     borderColor: theme.colors.primary,
     ...theme.shadows.lg,
+    overflow: 'hidden',
+  },
+  splashImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
   },
   appName: {
     fontSize: theme.typography.fontSize['5xl'],
