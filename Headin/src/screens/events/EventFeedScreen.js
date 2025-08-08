@@ -327,17 +327,30 @@ export default function EventFeedScreen() {
    * Updates the filteredEvents state with filtered results
    */
   const filterEvents = useCallback(() => {
+    // Safety check: ensure events is an array
+    if (!Array.isArray(events)) {
+      console.warn('Events is not an array:', events);
+      setFilteredEvents([]);
+      return;
+    }
+    
     let filtered = [...events];
     
     // Apply category filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(event => event.category === selectedCategory);
+      filtered = filtered.filter(event => event?.category === selectedCategory);
     }
     
     // Apply time filter
     if (selectedTimeFilter !== 'all_time') {
       const now = new Date();
       filtered = filtered.filter(event => {
+        // Safety check: ensure event and startTime exist
+        if (!event || !event.startTime) {
+          console.warn('Event missing startTime:', event);
+          return false;
+        }
+        
         const eventDate = event.startTime instanceof Date ? event.startTime : new Date(event.startTime);
         
         switch (selectedTimeFilter) {
@@ -430,16 +443,26 @@ export default function EventFeedScreen() {
       });
       
       let realEvents = [];
-      if (result.success) {
+      if (result.success && Array.isArray(result.data)) {
         console.log('Loaded real events:', result.data.length);
         // Convert Firestore Timestamps to JavaScript Dates for EventCard compatibility
-        realEvents = result.data.map(event => ({
-          ...event,
-          startTime: event.startTime?.toDate ? event.startTime.toDate() : new Date(event.startTime),
-          endTime: event.endTime?.toDate ? event.endTime.toDate() : new Date(event.endTime),
-          createdAt: event.createdAt?.toDate ? event.createdAt.toDate() : new Date(event.createdAt),
-          updatedAt: event.updatedAt?.toDate ? event.updatedAt.toDate() : new Date(event.updatedAt),
-        }));
+        realEvents = result.data.map(event => {
+          if (!event) {
+            console.warn('Null event found in data');
+            return null;
+          }
+          return {
+            ...event,
+            startTime: event.startTime?.toDate ? event.startTime.toDate() : new Date(event.startTime || new Date()),
+            endTime: event.endTime?.toDate ? event.endTime.toDate() : new Date(event.endTime || new Date()),
+            createdAt: event.createdAt?.toDate ? event.createdAt.toDate() : new Date(event.createdAt || new Date()),
+            updatedAt: event.updatedAt?.toDate ? event.updatedAt.toDate() : new Date(event.updatedAt || new Date()),
+            // Ensure stats object exists
+            stats: event.stats || { likesCount: 0, commentsCount: 0, attendeesCount: 0 },
+            // Ensure tags array exists
+            tags: Array.isArray(event.tags) ? event.tags : [],
+          };
+        }).filter(Boolean); // Remove any null events
         console.log('Processed events with converted dates');
         setError(null); // Clear any previous errors
       } else {
@@ -530,11 +553,11 @@ export default function EventFeedScreen() {
           return {
             ...event,  // Keep all existing event properties
             stats: {
-              ...event.stats,  // Keep existing stats
+              ...(event.stats || {}),  // Keep existing stats, default to empty object
               // Update likes count: +1 if liked, -1 if unliked (minimum 0)
               likesCount: isNowLiked 
-                ? event.stats.likesCount + 1 
-                : Math.max(0, event.stats.likesCount - 1)
+                ? (event.stats?.likesCount || 0) + 1 
+                : Math.max(0, (event.stats?.likesCount || 0) - 1)
             }
           };
         }
@@ -593,10 +616,10 @@ export default function EventFeedScreen() {
                 return {
                   ...event,
                   stats: {
-                    ...event.stats,
+                    ...(event.stats || {}),
                     likesCount: wasLiked 
-                      ? event.stats.likesCount + 1 
-                      : Math.max(0, event.stats.likesCount - 1)
+                      ? (event.stats?.likesCount || 0) + 1 
+                      : Math.max(0, (event.stats?.likesCount || 0) - 1)
                   }
                 };
               }

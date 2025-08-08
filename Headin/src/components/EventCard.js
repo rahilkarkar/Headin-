@@ -221,13 +221,13 @@ function EventCard({ event, onPress, onLike, onSave, onComment, isLiked = false,
           Shows "+X" indicator for hidden tags
         */}
         <View style={styles.tags}>
-          {event.tags.slice(0, responsive.maxTags).map((tag, index) => (
+          {event.tags && Array.isArray(event.tags) && event.tags.slice(0, responsive.maxTags).map((tag, index) => (
             <View key={index} style={styles.tag}>
               <Text style={styles.tagText}>#{tag}</Text>
             </View>
           ))}
           {/* Show count of remaining tags if there are more */}
-          {event.tags.length > responsive.maxTags && (
+          {event.tags && event.tags.length > responsive.maxTags && (
             <Text style={styles.moreTagsText}>
               +{event.tags.length - responsive.maxTags}
             </Text>
